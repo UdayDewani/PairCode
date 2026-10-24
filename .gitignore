@@ -22,3 +22,5 @@ target/
 
 # Graphify / AI agent outputs
 graphify-out/
+*graphify*
+**/graphify*

@@ -23,3 +23,9 @@
   4. Untracked compiled Maven target classes/reports from git index.
   5. Committed all new implementations (Phase 1-5 defect fixes, new test migrations, unit tests) and pushed to GitHub `origin/main`.
 - **Rationale:** User explicit request to rename `pair-code-ui-design` to `frontend` and push all new files to GitHub.
+
+### [2026-10-24] Exclude all graphify artifacts from git tracking
+- **Decision:**
+  1. Updated root `.gitignore` with wildcards (`graphify*`, `*graphify*`, `**/graphify*`, `graphify-out/`) to strictly prevent any graphify outputs or working files from being staged or pushed.
+  2. Verified `graphify-out/` is marked as ignored in git.
+- **Rationale:** User explicit rule not to push graphify artifacts to GitHub.

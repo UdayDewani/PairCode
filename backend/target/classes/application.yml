@@ -1,0 +1,23 @@
+spring:
+  application.name: paircode-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/paircode}
+    username: ${DATABASE_USER:paircode}
+    password: ${DATABASE_PASSWORD:paircode}
+  jpa:
+    open-in-view: false
+    hibernate.ddl-auto: validate
+  flyway.enabled: true
+  data.redis.host: ${REDIS_HOST:localhost}
+  data.redis.port: ${REDIS_PORT:6379}
+server.port: ${PORT:8080}
+app:
+  frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+  jwt-secret: ${JWT_SECRET:change-me-in-production-change-me-in-production}
+  access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
+  refresh-token-days: ${REFRESH_TOKEN_DAYS:7}
+  runner-enabled: ${RUNNER_ENABLED:false}
+  docker-command: ${DOCKER_COMMAND:docker}
+springdoc.swagger-ui.path: /swagger-ui.html
+management.endpoints.web.exposure.include: health,info
+logging.structured.format.console: logstash

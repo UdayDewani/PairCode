@@ -54,8 +54,8 @@ class JwtFilter extends OncePerRequestFilter {
 @Configuration @EnableWebSecurity
 class SecurityConfig {
   @Bean PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}
-  @Bean CorsConfigurationSource cors(@Value("${app.frontend-origin}") String origin){
-    var c=new CorsConfiguration();c.setAllowedOrigins(List.of(origin));c.setAllowedMethods(List.of("GET","POST","PATCH","DELETE","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setAllowCredentials(true);var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/**",c);return source;
+  @Bean(name="corsConfigurationSource") CorsConfigurationSource corsConfigurationSource(@Value("${app.frontend-origin}") String origin){
+    var c=new CorsConfiguration();c.setAllowedOrigins(List.of(origin));c.setAllowedMethods(List.of("GET","POST","PATCH","DELETE","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));c.setExposedHeaders(List.of("Authorization"));c.setAllowCredentials(true);c.setMaxAge(3600L);var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/**",c);return source;
   }
-  @Bean SecurityFilterChain security(HttpSecurity http,JwtFilter jwt)throws Exception{return http.csrf(c->c.disable()).cors(c->{}).sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(a->a.requestMatchers("/api/v1/auth/**","/swagger-ui/**","/v3/api-docs/**","/actuator/health","/ws/**").permitAll().requestMatchers(HttpMethod.OPTIONS,"/**").permitAll().anyRequest().authenticated()).addFilterBefore(jwt,UsernamePasswordAuthenticationFilter.class).build();}
+  @Bean SecurityFilterChain security(HttpSecurity http,JwtFilter jwt,CorsConfigurationSource corsConfigurationSource)throws Exception{return http.csrf(c->c.disable()).cors(c->c.configurationSource(corsConfigurationSource)).sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(a->a.requestMatchers("/api/v1/auth/**","/swagger-ui/**","/v3/api-docs/**","/actuator/health","/ws/**").permitAll().requestMatchers(HttpMethod.OPTIONS,"/**").permitAll().anyRequest().authenticated()).addFilterBefore(jwt,UsernamePasswordAuthenticationFilter.class).build();}
 }

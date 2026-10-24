@@ -1,6 +1,8 @@
 package dev.paircode.api;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -19,7 +21,7 @@ class AppUser {
 @Entity @Table(name="refresh_tokens")
 class RefreshToken { @Id UUID id=UUID.randomUUID(); @Column(name="user_id") UUID userId; @Column(name="token_hash") String tokenHash; @Column(name="expires_at") Instant expiresAt; @Column(name="revoked_at") Instant revokedAt; protected RefreshToken(){} RefreshToken(UUID userId,String h,Instant e){this.userId=userId;tokenHash=h;expiresAt=e;} }
 @Entity @Table(name="problems")
-class Problem { @Id UUID id; @Column(name="number") String number; String title,slug,topic; @Enumerated(EnumType.STRING) Difficulty difficulty; @Column(columnDefinition="text") String description; @Column(name="constraints_text",columnDefinition="text") String constraintsText; @Column(columnDefinition="text") String examples="[]"; @Column(name="starter_code",columnDefinition="text") String starterCode="{}"; @Column(name="acceptance_rate") double acceptanceRate; protected Problem(){} }
+class Problem { @Id UUID id; @Column(name="number") String number; String title,slug,topic; @Enumerated(EnumType.STRING) Difficulty difficulty; @Column(columnDefinition="text") String description; @Column(name="constraints_text",columnDefinition="text") String constraintsText; @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition="jsonb") String examples="[]"; @JdbcTypeCode(SqlTypes.JSON) @Column(name="starter_code",columnDefinition="jsonb") String starterCode="{}"; @Column(name="acceptance_rate", precision=5, scale=2) java.math.BigDecimal acceptanceRate; protected Problem(){} }
 @Entity @Table(name="rooms")
 class Room { @Id UUID id=UUID.randomUUID(); @Column(name="room_code") String roomCode; String name; @Column(name="owner_id") UUID ownerId; @Column(name="problem_id") UUID problemId; String language="PYTHON"; @Enumerated(EnumType.STRING) RoomStatus status=RoomStatus.ACTIVE; @Column(name="candidate_can_edit") boolean candidateCanEdit=true; @Column(name="editor_locked") boolean editorLocked; @Column(name="document_state") byte[] documentState; @Column(name="created_at") Instant createdAt=Instant.now(); @Column(name="ended_at") Instant endedAt; protected Room(){} }
 @Entity @Table(name="room_participants")

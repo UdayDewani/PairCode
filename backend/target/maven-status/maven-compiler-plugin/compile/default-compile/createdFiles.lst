@@ -14,6 +14,7 @@ dev\paircode\api\RunRequest.class
 dev\paircode\api\CollaborationController.class
 dev\paircode\api\Api.class
 dev\paircode\api\RoomController.class
+dev\paircode\api\WsTicket.class
 dev\paircode\api\ApiError.class
 dev\paircode\api\PairCodeApplication.class
 dev\paircode\api\CodeSnapshot.class
@@ -36,6 +37,7 @@ dev\paircode\api\ProblemChangeRequest.class
 dev\paircode\api\SecurityConfig.class
 dev\paircode\api\DockerCodeExecutor.class
 dev\paircode\api\ExecutionQueueConfig.class
+dev\paircode\api\WsTicketController.class
 dev\paircode\api\EndRoomRequest.class
 dev\paircode\api\Submission.class
 dev\paircode\api\SocketAuth.class
@@ -63,3 +65,4 @@ dev\paircode\api\SessionRepository.class
 dev\paircode\api\TokenService.class
 dev\paircode\api\TestResult.class
 dev\paircode\api\SessionController.class
+dev\paircode\api\WiringConfig.class

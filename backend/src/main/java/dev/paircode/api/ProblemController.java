@@ -8,8 +8,13 @@ import java.util.*;
 @RestController @RequestMapping("/api/v1/problems")
 class ProblemController {
   private final ProblemRepository problems; ProblemController(ProblemRepository problems){this.problems=problems;}
-  @GetMapping Map<String,Object> list(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,@RequestParam(required=false) String search,@RequestParam(required=false) String topic,@RequestParam(required=false) Difficulty difficulty){
-    var all=problems.findAll(Sort.by("number"));var filtered=all.stream().filter(p->search==null||p.title.toLowerCase().contains(search.toLowerCase())||p.topic.toLowerCase().contains(search.toLowerCase())).filter(p->topic==null||p.topic.equalsIgnoreCase(topic)).filter(p->difficulty==null||p.difficulty==difficulty).toList();int from=Math.min(page*Math.min(size,100),filtered.size()),to=Math.min(from+Math.min(size,100),filtered.size());return Map.of("items",filtered.subList(from,to).stream().map(Api::problem).toList(),"page",page,"size",size,"total",filtered.size());
+  @GetMapping Map<String,Object> list(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,@RequestParam(required=false) String search){
+    page=Math.max(0,page); size=Math.min(Math.max(1,size),100);
+    Pageable pageable=PageRequest.of(page,size,Sort.by("number"));
+    Page<Problem> result;
+    if(search!=null&&!search.isBlank()) result=problems.findByTitleContainingIgnoreCaseOrTopicContainingIgnoreCase(search,search,pageable);
+    else result=problems.findAll(pageable);
+    return Map.of("items",result.getContent().stream().map(Api::problem).toList(),"page",page,"size",size,"total",result.getTotalElements());
   }
   @GetMapping("/{id}") Map<String,Object> detail(@PathVariable UUID id){return problems.findById(id).map(Api::problem).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Problem not found"));}
 }

@@ -7,17 +7,34 @@ __v0_jsx-dev-runtime.ts
 .v0-trash/
 .vercel/
 
-# Environment variables
-.env*.local
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
 
-# Common ignores
-node_modules
+# Node / Next.js
+node_modules/
 .next/
-.DS_Store
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
 
-   * text=auto
-   *.sh text eol=lf
-   *.java text eol=lf
-   *.ts text eol=lf
-   *.tsx text eol=lf
-   *.json text eol=lf
+# Java / Spring Boot
+target/
+build/
+.gradle/
+*.class
+*.jar
+*.log
+logs/
+
+# IDEs / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

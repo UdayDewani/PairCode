@@ -2,6 +2,14 @@
 -- Replace V4's empty placeholder rows with actual input/expected pairs.
 -- We do NOT modify V3/V4 (already applied); we delete their empty rows and insert real ones.
 
+-- Remove test results referencing placeholder test cases to satisfy FK constraint
+DELETE FROM test_results
+WHERE test_case_id IN (
+  SELECT md5(id::text || ':visible')::uuid FROM problems WHERE id <> '00000000-0000-0000-0000-000000000001'
+  UNION ALL
+  SELECT md5(id::text || ':hidden')::uuid FROM problems WHERE id <> '00000000-0000-0000-0000-000000000001'
+);
+
 -- Remove empty placeholder rows from V4 for all problems except the one already covered in V3 (problem 1)
 DELETE FROM test_cases
 WHERE id IN (

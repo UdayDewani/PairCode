@@ -21,3 +21,8 @@ app:
 springdoc.swagger-ui.path: /swagger-ui.html
 management.endpoints.web.exposure.include: health,info
 logging.structured.format.console: logstash
+
+---
+spring.config.activate.on-profile: dev
+# In dev profile, placeholder secret is allowed (startup check bypassed)
+app.jwt-secret: ${JWT_SECRET:change-me-in-production-change-me-in-production}

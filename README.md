@@ -1,6 +1,6 @@
 # PairCode
 
-PairCode is a collaborative coding-interview application. The existing Next.js UI lives in `pair-code-ui-design`; the Spring Boot 3 / Java 21 API is in `backend`.
+PairCode is a collaborative coding-interview application. The existing Next.js UI lives in `frontend`; the Spring Boot 3 / Java 21 API is in `backend`.
 
 ## Run locally
 
@@ -8,7 +8,7 @@ Prerequisites: Docker Desktop and Docker Compose. From this directory:
 
 ```sh
 docker compose up --build
-cd pair-code-ui-design
+cd frontend
 copy .env.example .env.local
 pnpm install
 pnpm dev

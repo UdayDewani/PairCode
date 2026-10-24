@@ -1,0 +1,24 @@
+# Environment variables & local secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build output
+backend/target/
+target/
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+
+# Graphify / AI agent outputs
+graphify-out/

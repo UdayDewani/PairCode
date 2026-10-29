@@ -25,18 +25,19 @@ jobs:
           DOMAIN: ${{ secrets.DOMAIN }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          RUNNER_WORK_DIR: ${{ vars.RUNNER_WORK_DIR || '/tmp/paircode-run' }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DOMAIN,JWT_SECRET,DB_PASSWORD
+          envs: DOMAIN,JWT_SECRET,DB_PASSWORD,RUNNER_WORK_DIR
           script: |
             set -e
             cd ~/PairCode
-            mkdir -p /tmp/paircode-run
+            mkdir -p "$RUNNER_WORK_DIR"
 
-            printf 'DOMAIN=%s\nJWT_SECRET=%s\nDB_PASSWORD=%s\n' \
-              "$DOMAIN" "$JWT_SECRET" "$DB_PASSWORD" > .env
+            printf 'DOMAIN=%s\nJWT_SECRET=%s\nDB_PASSWORD=%s\nRUNNER_WORK_DIR=%s\n' \
+              "$DOMAIN" "$JWT_SECRET" "$DB_PASSWORD" "$RUNNER_WORK_DIR" > .env
 
             chmod 600 .env
 

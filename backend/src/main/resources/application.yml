@@ -18,8 +18,11 @@ app:
   refresh-token-days: ${REFRESH_TOKEN_DAYS:7}
   runner-enabled: ${RUNNER_ENABLED:false}
   docker-command: ${DOCKER_COMMAND:docker}
+  runner-work-dir: ${RUNNER_WORK_DIR:/tmp/paircode-run}
 springdoc.swagger-ui.path: /swagger-ui.html
 management.endpoints.web.exposure.include: health,info
+management.endpoint.health.show-details: always
+management.endpoint.health.show-components: always
 logging.structured.format.console: logstash
 
 ---

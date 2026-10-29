@@ -37,12 +37,20 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
   return response.status === 204 ? undefined as T : response.json()
 }
 
-function parseProblem(raw: Record<string, unknown>): Problem {
+export function parseProblem(raw: Record<string, unknown>): Problem {
   let examples: ExampleItem[] = []
   let starterCode: StarterCode = {}
-  try { examples = typeof raw.examples === 'string' ? JSON.parse(raw.examples) : (raw.examples as ExampleItem[] ?? []) } catch { examples = [] }
+  try { examples = typeof raw.examples === 'string' ? JSON.parse(raw.examples) : (Array.isArray(raw.examples) ? raw.examples as ExampleItem[] : []) } catch { examples = [] }
   try { starterCode = typeof raw.starterCode === 'string' ? JSON.parse(raw.starterCode) : (raw.starterCode as StarterCode ?? {}) } catch { starterCode = {} }
   return { ...raw as unknown as Problem, examples, starterCode }
+}
+
+export function parseRoom(room: Room): Room {
+  if (!room) return room
+  return {
+    ...room,
+    problem: room.problem ? parseProblem(room.problem as unknown as Record<string, unknown>) : undefined
+  }
 }
 
 export const api = {
@@ -53,9 +61,9 @@ export const api = {
   logout: async () => { try { if (refreshToken) await request('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }) } finally { saveTokens(null, null) } },
   profile: () => request<User>('/profile'), updateProfile: (data: Partial<User>) => request<User>('/profile', { method: 'PATCH', body: JSON.stringify(data) }),
   problems: (search = '') => request<{ items: Problem[] }>(`/problems?size=50&search=${encodeURIComponent(search)}`).then(r => ({ ...r, items: r.items.map(p => parseProblem(p as unknown as Record<string, unknown>)) })),
-  createRoom: (data: { name: string; problemId?: string; language: string; candidateCanEdit: boolean }) => request<Room>('/rooms', { method: 'POST', body: JSON.stringify(data) }),
-  room: (code: string) => request<Room>(`/rooms/${code}`), joinRoom: (code: string) => request<Room>(`/rooms/${code}/join`, { method: 'POST' }),
-  permissions: (code: string, data: { candidateCanEdit?: boolean; editorLocked?: boolean }) => request<Room>(`/rooms/${code}/permissions`, { method: 'PATCH', body: JSON.stringify(data) }),
+  createRoom: (data: { name: string; problemId?: string; language: string; candidateCanEdit: boolean }) => request<Room>('/rooms', { method: 'POST', body: JSON.stringify(data) }).then(parseRoom),
+  room: (code: string) => request<Room>(`/rooms/${code}`).then(parseRoom), joinRoom: (code: string) => request<Room>(`/rooms/${code}/join`, { method: 'POST' }).then(parseRoom),
+  permissions: (code: string, data: { candidateCanEdit?: boolean; editorLocked?: boolean }) => request<Room>(`/rooms/${code}/permissions`, { method: 'PATCH', body: JSON.stringify(data) }).then(parseRoom),
   endRoom: (code: string, sourceCode: string) => request<void>(`/rooms/${code}/end`, { method: 'POST', body: JSON.stringify({ sourceCode }) }),
   messages: (code: string) => request<ChatMessage[]>(`/rooms/${code}/messages`), sendMessage: (code: string, content: string) => request<ChatMessage>(`/rooms/${code}/messages`, { method: 'POST', body: JSON.stringify({ content }) }),
   run: (code: string, data: { sourceCode: string; language: string; stdin?: string }) => request(`/rooms/${code}/run`, { method: 'POST', body: JSON.stringify(data) }),

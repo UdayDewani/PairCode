@@ -19,9 +19,12 @@
 - **Decision:** Starting Docker Desktop to bring up the multi-container stack (`postgres`, `redis`, `api`) via `docker compose up --build`, and preparing the Next.js frontend (`frontend/.env.local`, `pnpm dev`).
 - **Rationale:** User requested to run the project.
 
-### [2026-10-24] Fix Flyway Migration V6 Foreign Key Constraint
-- **Decision:** Updated `V6__real_test_cases_and_starter_code.sql` to delete existing `test_results` referencing the placeholder test cases before deleting the placeholder rows from `test_cases`.
-- **Rationale:** Prevented `PSQLException: foreign key constraint "test_results_test_case_id_fkey" violation` when migrating existing databases with submission test runs.
+### [2026-10-24] Fix Runtime TypeError room.problem.examples.map is not a function
+- **Decision:**
+  1. Updated `frontend/lib/api.ts` to export `parseRoom` and apply it to `createRoom`, `room`, `joinRoom`, and `permissions` API endpoints so `problem.examples` and `problem.starterCode` are consistently parsed from backend JSON strings into objects/arrays.
+  2. Updated `frontend/components/live-room.tsx` to safely normalize `examples` (handling arrays, JSON strings, or undefined) and wrap room state setters with `parseRoom`.
+- **Rationale:** The backend serializes JSONB fields `examples` and `starterCode` as raw JSON strings in the Room DTO. When creating/joining rooms, calling `.map()` on an unparsed string resulted in a runtime TypeError.
+
 
 
 

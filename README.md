@@ -22,6 +22,8 @@ docker build -t paircode-runner-java backend/runner-images/java
 docker build -t paircode-runner-cpp backend/runner-images/cpp
 ```
 
+The API image includes the Docker CLI and talks to the host daemon through `/var/run/docker.sock`. The runner work directory defaults to `/tmp/paircode-run` and must be the same absolute path on the host and in the API container; override it with `RUNNER_WORK_DIR` in both places if needed. See [docs/code-runner.md](docs/code-runner.md) for the runner health check, cleanup, limits, and troubleshooting.
+
 Copy `.env.example` and set a strong, unique `JWT_SECRET` outside development. Never commit `.env.local` or production secrets.
 
 ## Manual checklist
@@ -33,6 +35,8 @@ Copy `.env.example` and set a strong, unique `JWT_SECRET` outside development. N
 5. Change the room language as the interviewer; confirm the filename extension and editor mode change, and that an empty/starter document is replaced exactly once. Verify a locked candidate sees the language selector disabled with its reason.
 6. Lock candidate editing, verify both REST snapshot and WebSocket document update are forbidden, then unlock.
 7. End the room and inspect `GET /api/v1/sessions/{id}` as the interviewer.
+8. Check `GET /actuator/health` shows `runner` as `UP`; remove a runner image tag and restart to confirm it reports that image as missing.
+9. Run `docker compose -f docker-compose.prod.yml exec api docker version` on the deployed host.
 
 ## Security notes and open decisions
 

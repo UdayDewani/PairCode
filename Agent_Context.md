@@ -57,3 +57,15 @@
 ### [2026-10-29] Add live room language changes
 - **Decision:** Added an authorized room-language endpoint with a `language.changed` realtime event. The room UI now lets interviewers and editable candidates choose Java, Python, or C++, keeps custom code intact, and replaces only empty or unchanged starter code with the selected language's starter code.
 - **Rationale:** The language selector was permanently disabled despite the runner enforcing that executions match the room language, leaving users unable to switch languages during an interview.
+
+### [2026-10-29] Make the Docker code runner work in the deployed API
+- **Decision:**
+  1. Copied the static Docker CLI from `docker:27-cli` into the API runtime image so `DockerCodeExecutor` can reach the mounted host socket.
+  2. Added `app.runner-work-dir` (`RUNNER_WORK_DIR`, default `/tmp/paircode-run`) and use it for run directories. Compose bind-mounts that identical absolute path into the API. Run directories are `0777` and source/input files `0644` for UID/GID `65534`.
+  3. Drains stdout and stderr concurrently with a bounded 64 KB capture so large output cannot deadlock the process. A 1 MB output test passes without hanging.
+  4. Removed `--rm` and inspects `State.OOMKilled` before removing the container, so exit 137 is reported as an out-of-memory error rather than a timeout.
+  5. Added a startup and periodic self-check exposed as the Actuator `runner` health component. It runs `docker version` and `docker image inspect` for all three images, and logs explicit errors naming missing images or an unavailable daemon.
+  6. Added sandbox labels, stale-container/stale-directory cleanup, `--memory-swap` equal to memory, `nofile`/`nproc` limits, and Java `-Xmx128m -XX:+UseSerialGC`.
+  7. Used `sh -c` rather than `sh -lc` because the login shell reset `PATH` in the Java runner image and hid `javac`.
+- **Rationale:** Deployed Run failed because the API image had no Docker CLI, the daemon could not see the API container's `/tmp`, and the sandbox user could not write to a root-owned `0700` directory. The other changes remove runner deadlocks, make failures diagnosable, and keep leftover sandboxes from accumulating.
+- **Verification:** `mvn -B test` passes (24 tests, 1 Testcontainers test skipped because Testcontainers could not negotiate the local Docker Desktop pipe); the executor integration tests ran all three languages plus compile-error, timeout, and large-output cases against locally built runner images. See `docs/code-runner.md`.

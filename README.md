@@ -22,7 +22,7 @@ docker build -t paircode-runner-java backend/runner-images/java
 docker build -t paircode-runner-cpp backend/runner-images/cpp
 ```
 
-The API image includes the Docker CLI and talks to the host daemon through `/var/run/docker.sock`. The runner work directory defaults to `/tmp/paircode-run` and must be the same absolute path on the host and in the API container; override it with `RUNNER_WORK_DIR` in both places if needed. See [docs/code-runner.md](docs/code-runner.md) for the runner health check, cleanup, limits, and troubleshooting.
+The API image includes the Docker CLI and talks to the host daemon through `/var/run/docker.sock`. The runner work directory defaults to `/tmp/paircode-run` and must be the same absolute path on the host and in the API container; override it with `RUNNER_WORK_DIR` in both places if needed. Docker Desktop's `/tmp` bind is `noexec`, so local runs there should use an executable path such as `RUNNER_WORK_DIR=/var/lib/paircode-run docker compose up --build`. See [docs/code-runner.md](docs/code-runner.md) for the runner health check, cleanup, limits, and troubleshooting.
 
 Copy `.env.example` and set a strong, unique `JWT_SECRET` outside development. Never commit `.env.local` or production secrets.
 

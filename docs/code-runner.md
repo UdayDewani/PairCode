@@ -24,7 +24,13 @@ The host filesystem for this directory must not be mounted `noexec`, because `ja
 findmnt -no TARGET,OPTIONS /tmp
 ```
 
-If it is `noexec`, use another absolute directory and set `RUNNER_WORK_DIR` for the compose deployment and the deploy workflow's `mkdir` step.
+If it is `noexec`, use another absolute directory and set `RUNNER_WORK_DIR` for the compose deployment and the deploy workflow's `mkdir` step. Docker Desktop on macOS/Windows mounts its `/tmp` bind with `noexec`; for local runs use an executable path such as `/var/lib/paircode-run`:
+
+```sh
+RUNNER_WORK_DIR=/var/lib/paircode-run docker compose up --build
+```
+
+Without this, Python and Java still run, but a compiled C++ `./main` fails with `Permission denied`.
 
 Run directories are created under the work directory with mode `0777`, and source/input files are `0644`, because sandbox processes run as UID/GID `65534:65534`. Directories and containers are removed after each run. On startup and every five minutes, the API also removes `paircode-run-*` containers and `run-*` directories older than 60 seconds.
 

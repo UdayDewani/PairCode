@@ -19,21 +19,23 @@ jobs:
           target: "~/PairCode"
 
       - name: Build and restart
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/PairCode
-            mkdir -p /tmp/paircode-run
-            cat > .env <<EOF
-            DOMAIN=${{ secrets.DOMAIN }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            EOF
-            docker build -t paircode-runner-python backend/runner-images/python
-            docker build -t paircode-runner-java backend/runner-images/java
-            docker build -t paircode-runner-cpp backend/runner-images/cpp
-            docker compose -f docker-compose.prod.yml up -d --build
-            docker image prune -f
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          install -m 600 /dev/null key
+          printf '%s\n' "$SSH_KEY" > key
+          ssh -i key -o StrictHostKeyChecking=no ubuntu@"$HOST" bash -s <<EOF
+          set -e
+          cd ~/PairCode
+          mkdir -p /tmp/paircode-run
+          printf 'DOMAIN=%s\nJWT_SECRET=%s\nDB_PASSWORD=%s\n' '$DOMAIN' '$JWT_SECRET' '$DB_PASSWORD' > .env
+          docker build -t paircode-runner-python backend/runner-images/python
+          docker build -t paircode-runner-java backend/runner-images/java
+          docker build -t paircode-runner-cpp backend/runner-images/cpp
+          docker compose -f docker-compose.prod.yml up -d --build
+          docker image prune -f
+          EOF

@@ -18,6 +18,7 @@ jobs:
           source: "backend,frontend,docker-compose.prod.yml,Caddyfile"
           target: "~/PairCode"
 
+      
       - name: Build and restart
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -28,7 +29,20 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOMAIN,JWT_SECRET,DB_PASSWORD
           script: |
-            whoami
+            set -e
             cd ~/PairCode
-            docker ps
+            mkdir -p /tmp/paircode-run
+
+            printf 'DOMAIN=%s\nJWT_SECRET=%s\nDB_PASSWORD=%s\n' \
+              "$DOMAIN" "$JWT_SECRET" "$DB_PASSWORD" > .env
+
+            chmod 600 .env
+
+            docker build -t paircode-runner-python backend/runner-images/python
+            docker build -t paircode-runner-java backend/runner-images/java
+            docker build -t paircode-runner-cpp backend/runner-images/cpp
+
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker image prune -f

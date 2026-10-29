@@ -60,3 +60,10 @@ Containers run with no network, a read-only root filesystem, a writable `/tmp` t
 cd backend
 mvn -B test
 ```
+
+Manual checks that are awkward to automate:
+
+- Compile error: run `public class Main { int broken = ; }` as Java. Expect `COMPILE_ERROR` with the `javac` message.
+- Timeout: run `while True: pass` as Python. Expect `TIME_LIMIT_EXCEEDED` in about 5-8 seconds, not a hung request.
+- Out of memory: run `x = bytearray(600 * 1024 * 1024)` as Python. Expect `RUNTIME_ERROR` with `Memory limit exceeded`, not `TIME_LIMIT_EXCEEDED`; this confirms exit 137 was inspected through `State.OOMKilled`.
+- Large output: run `print('x' * 1_000_000)` as Python. Expect `SUCCESS`, output ending in `...[output truncated]`, and no timeout.

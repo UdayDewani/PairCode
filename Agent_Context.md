@@ -49,3 +49,7 @@
   2. Routed user action buttons ("Log in", "Get started", "Start interviewing", "View demo") to open `<Auth />` with the appropriate mode (login vs register).
   3. Added "Back to home" navigation in `<Auth />` to easily return to the landing page.
 - **Rationale:** User reported navigating to `http://localhost:3000/` was bypassing the landing page and immediately showing the sign up form.
+
+### [2026-10-29] Upgrade Next.js security release
+- **Decision:** Upgraded the frontend from Next.js 16.4.0 to 16.4.3 using `next upgrade --agent=security`, and configured `experimental.agentUpgrade: 'security'` for future security upgrade reminders.
+- **Rationale:** The installed Next.js version was covered by a published security advisory. The same-major upgrade does not require a migration codemod.

@@ -13,9 +13,9 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "backend,pair-code-ui-design,docker-compose.prod.yml,Caddyfile"
+          source: "backend,frontend,docker-compose.prod.yml,Caddyfile"
           target: "~/PairCode"
 
       - name: Build and restart

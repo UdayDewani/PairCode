@@ -14,6 +14,7 @@ Connect to `ws://localhost:8080/ws?token=<access-jwt>`. This is a native WebSock
 | REST `POST /rooms/{id}/messages` | `{ "content": "…" }` | Persists then emits `chat`. |
 | REST `POST /rooms/{id}/run` | source, language, stdin | Emits `run.started`, then `run.finished`. |
 | REST `PATCH /rooms/{id}/permissions` | edit/lock flags | Interviewer-only; emits `permission.changed`. |
+| REST `PATCH /rooms/{id}/language` | `{ "language": "JAVA\|PYTHON\|CPP" }` | Interviewer or an editable candidate; emits `language.changed`. |
 
 ## Server → client
 
@@ -25,6 +26,7 @@ Every JSON event has `{ "type": "…", "data": … }`.
 - `chat`: persisted message.
 - `run.started`, `run.finished`: submission lifecycle/result.
 - `permission.changed`: current room permission state.
+- `language.changed`: current room state after its language changes. The client initiating the change replaces only an empty or unchanged starter document; other clients retain their current document.
 - `session.ended`: session is no longer editable.
 - `error`: a non-fatal protocol error.
 

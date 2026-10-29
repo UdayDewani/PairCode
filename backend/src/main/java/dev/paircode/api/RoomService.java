@@ -41,6 +41,14 @@ class RoomService {
   }
   void interviewer(UUID room,UUID user){if(member(room,user).role!=Role.INTERVIEWER)throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Interviewer role required");}
   void canEdit(UUID room,UUID user){var r=room(room);var m=member(room,user);if(m.role==Role.CANDIDATE&&(!r.candidateCanEdit||r.editorLocked))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Editor is locked for candidates");}
+  @Transactional Room changeLanguage(UUID roomId,UUID user,String language){
+    var room=room(roomId);
+    if(room.status==RoomStatus.ENDED)throw new ResponseStatusException(HttpStatus.GONE,"Session has ended");
+    var participant=member(roomId,user);
+    if(participant.role==Role.CANDIDATE)canEdit(roomId,user);
+    room.language=language;
+    return rooms.save(room);
+  }
   @Transactional Room permission(UUID roomId,UUID user,Boolean candidateCanEdit,Boolean editorLocked){interviewer(roomId,user);var r=room(roomId);if(candidateCanEdit!=null)r.candidateCanEdit=candidateCanEdit;if(editorLocked!=null)r.editorLocked=editorLocked;return rooms.save(r);}
   @Transactional Room changeProblem(UUID roomId,UUID user,UUID problemId){interviewer(roomId,user);if(!problems.existsById(problemId))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Problem not found");var r=room(roomId);r.problemId=problemId;return rooms.save(r);}
   @Transactional void removeParticipant(UUID roomId,UUID interviewer,UUID userId){

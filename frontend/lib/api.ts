@@ -64,6 +64,7 @@ export const api = {
   createRoom: (data: { name: string; problemId?: string; language: string; candidateCanEdit: boolean }) => request<Room>('/rooms', { method: 'POST', body: JSON.stringify(data) }).then(parseRoom),
   room: (code: string) => request<Room>(`/rooms/${code}`).then(parseRoom), joinRoom: (code: string) => request<Room>(`/rooms/${code}/join`, { method: 'POST' }).then(parseRoom),
   permissions: (code: string, data: { candidateCanEdit?: boolean; editorLocked?: boolean }) => request<Room>(`/rooms/${code}/permissions`, { method: 'PATCH', body: JSON.stringify(data) }).then(parseRoom),
+  changeLanguage: (code: string, language: Room['language']) => request<Room>(`/rooms/${code}/language`, { method: 'PATCH', body: JSON.stringify({ language }) }).then(parseRoom),
   endRoom: (code: string, sourceCode: string) => request<void>(`/rooms/${code}/end`, { method: 'POST', body: JSON.stringify({ sourceCode }) }),
   messages: (code: string) => request<ChatMessage[]>(`/rooms/${code}/messages`), sendMessage: (code: string, content: string) => request<ChatMessage>(`/rooms/${code}/messages`, { method: 'POST', body: JSON.stringify({ content }) }),
   run: (code: string, data: { sourceCode: string; language: string; stdin?: string }) => request(`/rooms/${code}/run`, { method: 'POST', body: JSON.stringify(data) }),

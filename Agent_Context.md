@@ -53,3 +53,7 @@
 ### [2026-10-29] Upgrade Next.js security release
 - **Decision:** Upgraded the frontend from Next.js 16.4.0 to 16.4.3 using `next upgrade --agent=security`, and configured `experimental.agentUpgrade: 'security'` for future security upgrade reminders.
 - **Rationale:** The installed Next.js version was covered by a published security advisory. The same-major upgrade does not require a migration codemod.
+
+### [2026-10-29] Add live room language changes
+- **Decision:** Added an authorized room-language endpoint with a `language.changed` realtime event. The room UI now lets interviewers and editable candidates choose Java, Python, or C++, keeps custom code intact, and replaces only empty or unchanged starter code with the selected language's starter code.
+- **Rationale:** The language selector was permanently disabled despite the runner enforcing that executions match the room language, leaving users unable to switch languages during an interview.

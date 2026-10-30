@@ -6,9 +6,22 @@ export const metadata: Metadata = {
   title: 'PairCode — Interview. Code. Together.',
   description: 'The collaborative coding workspace for technical interviews.',
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    icon: [
+      {
+        url: '/icon.svg?v=2',
+        type: 'image/svg+xml',
+      },
+      {
+        url: '/icon-light-32x32.png?v=2',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png?v=2',
+        media: '(prefers-color-scheme: dark)',
+      },
+    ],
+    shortcut: '/icon.svg?v=2',
+    apple: '/apple-icon.png?v=2',
   },
 }
 

@@ -35,24 +35,10 @@ function Landing({ onAuth }: { onAuth: (register?: boolean) => void }) {
           <h1 className="mt-5 max-w-xl text-5xl font-semibold leading-[1.05] tracking-[-.04em] md:text-7xl">
             Interview.<br /><span className="text-primary">Code.</span> Together.
           </h1>
-          <p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">
-            The collaborative coding workspace for technical interviews. Solve problems together, in real time, from anywhere.
-          </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button type="button" size="lg" onClick={() => onAuth(true)}>
               Start interviewing <ArrowRight data-icon="inline-end" className="size-4" />
             </Button>
-            <Button type="button" size="lg" variant="outline" onClick={() => onAuth(false)}>
-              View demo <Play data-icon="inline-start" className="size-4" />
-            </Button>
-          </div>
-          <div className="mt-9 flex items-center gap-3 text-sm text-muted-foreground">
-            <div className="flex -space-x-2">
-              <Avatar initials="JD" color="bg-blue-500" />
-              <Avatar initials="SK" color="bg-rose-500" />
-              <Avatar initials="AM" color="bg-emerald-500" />
-            </div>
-            <span>Trusted by <strong className="text-foreground">2,000+</strong> engineering teams</span>
           </div>
         </div>
         <div className="product-frame">
@@ -169,11 +155,11 @@ function Auth({ initialRegister = false, onBack, complete }: { initialRegister?:
   )
 }
 
-function CreateRoom({ close, opened }: { close: () => void; opened: (room: Room) => void }) {
-  const [problems, setProblems] = useState<Problem[]>([]), [name, setName] = useState(''), [problemId, setProblemId] = useState(''), [language, setLanguage] = useState('PYTHON'), [candidateCanEdit, setCandidateCanEdit] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false)
+function CreateRoom({ close, opened, preferredLanguage }: { close: () => void; opened: (room: Room) => void; preferredLanguage: User['preferredLanguage'] }) {
+  const [problems, setProblems] = useState<Problem[]>([]), [name, setName] = useState(''), [problemId, setProblemId] = useState(''), [language, setLanguage] = useState(preferredLanguage), [candidateCanEdit, setCandidateCanEdit] = useState(true), [error, setError] = useState(''), [busy, setBusy] = useState(false)
   useEffect(() => { api.problems().then(x => { setProblems(x.items); setProblemId(x.items[0]?.id ?? '') }).catch(e => setError(e.message)) }, [])
   const create = async (e: FormEvent) => { e.preventDefault(); setBusy(true); setError(''); try { opened(await api.createRoom({ name, problemId: problemId || undefined, language, candidateCanEdit })) } catch (e) { setError(e instanceof Error ? e.message : 'Could not create room') } finally { setBusy(false) } }
-  return <div className="modal-backdrop"><form className="modal" onSubmit={create}><div className="eyebrow">New interview</div><h2 className="mt-2 text-xl font-semibold">Create a room</h2><div className="mt-6 flex flex-col gap-4"><label className="field">Room name<input className="input" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Backend interview" /></label><label className="field">Problem<select className="select" value={problemId} onChange={e => setProblemId(e.target.value)}><option value="">No problem yet</option>{problems.map(p => <option key={p.id} value={p.id}>{p.title} · {p.difficulty}</option>)}</select></label><label className="field">Language<select className="select" value={language} onChange={e => setLanguage(e.target.value)}><option value="PYTHON">Python</option><option value="JAVA">Java</option><option value="CPP">C++</option></select></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={candidateCanEdit} onChange={e => setCandidateCanEdit(e.target.checked)} /> Candidate can edit</label>{error && <p className="text-sm text-destructive">{error}</p>}</div><div className="mt-7 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={close}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create room'}</Button></div></form></div>
+  return <div className="modal-backdrop"><form className="modal" onSubmit={create}><div className="eyebrow">New interview</div><h2 className="mt-2 text-xl font-semibold">Create a room</h2><div className="mt-6 flex flex-col gap-4"><label className="field">Room name<input className="input" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Backend interview" /></label><label className="field">Problem<select className="select" value={problemId} onChange={e => setProblemId(e.target.value)}><option value="">No problem yet</option>{problems.map(p => <option key={p.id} value={p.id}>{p.title} · {p.difficulty}</option>)}</select></label><label className="field">Language<select className="select" value={language} onChange={e => setLanguage(e.target.value as User['preferredLanguage'])}><option value="PYTHON">Python</option><option value="JAVA">Java</option><option value="CPP">C++</option></select></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={candidateCanEdit} onChange={e => setCandidateCanEdit(e.target.checked)} /> Candidate can edit</label>{error && <p className="text-sm text-destructive">{error}</p>}</div><div className="mt-7 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={close}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create room'}</Button></div></form></div>
 }
 
 function JoinRoom({ close, opened }: { close: () => void; opened: (room: Room) => void }) {
@@ -221,5 +207,5 @@ export default function Page() {
     {tab === 'problems' && <><div className="flex items-start justify-between"><div><div className="eyebrow">Practice library</div><h1 className="mt-2 text-3xl font-semibold">Problems</h1></div><Button onClick={() => setModal('create')}><Plus data-icon="inline-start" />Create room</Button></div><div className="search mt-8"><Search /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search problems…" /></div><div className="panel mt-4 overflow-hidden">{visibleProblems.length ? <table><thead><tr><th>#</th><th>Problem</th><th>Topic</th><th>Difficulty</th><th>Acceptance</th></tr></thead><tbody>{visibleProblems.map(p => <tr key={p.id}><td>{p.number}</td><td className="font-medium">{p.title}</td><td>{p.topic}</td><td>{p.difficulty}</td><td>{p.acceptanceRate}%</td></tr>)}</tbody></table> : <Empty>No problems match your search.</Empty>}</div></>}
     {tab === 'sessions' && <><div className="eyebrow">Your activity</div><h1 className="mt-2 text-3xl font-semibold">Session history</h1><div className="panel mt-8 overflow-hidden">{sessions.length ? <table><thead><tr><th>Room</th><th>Language</th><th>Score</th><th>Status</th><th>Started</th></tr></thead><tbody>{sessions.map(s => <tr key={s.id}><td className="font-medium">{s.name}</td><td>{s.language}</td><td>{s.score ?? '—'}</td><td>{s.status}</td><td>{new Date(s.startedAt).toLocaleString()}</td></tr>)}</tbody></table> : <Empty>No sessions yet.</Empty>}</div></>}
     {tab === 'profile' && <Profile user={user} updated={setUser} failed={setError} />}
-  </main></div>{modal === 'create' && <CreateRoom close={() => setModal(null)} opened={r => { setRoom(r); setModal(null) }} />}{modal === 'join' && <JoinRoom close={() => setModal(null)} opened={r => { setRoom(r); setModal(null) }} />}</div>
+  </main></div>{modal === 'create' && <CreateRoom close={() => setModal(null)} opened={r => { setRoom(r); setModal(null) }} preferredLanguage={user.preferredLanguage} />}{modal === 'join' && <JoinRoom close={() => setModal(null)} opened={r => { setRoom(r); setModal(null) }} />}</div>
 }

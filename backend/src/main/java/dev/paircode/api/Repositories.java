@@ -22,7 +22,10 @@ interface RoomRepository extends JpaRepository<Room,UUID> {
 }
 interface ParticipantRepository extends JpaRepository<RoomParticipant,UUID> { Optional<RoomParticipant> findByRoomIdAndUserId(UUID roomId,UUID userId); List<RoomParticipant> findByRoomId(UUID roomId); List<RoomParticipant> findByUserId(UUID userId); }
 interface ChatRepository extends JpaRepository<ChatMessage,UUID> { List<ChatMessage> findByRoomIdOrderByCreatedAtAsc(UUID roomId); }
-interface SubmissionRepository extends JpaRepository<Submission,UUID> { List<Submission> findByRoomIdOrderByCreatedAtDesc(UUID roomId); }
+interface SubmissionRepository extends JpaRepository<Submission,UUID> {
+  List<Submission> findByRoomIdOrderByCreatedAtDesc(UUID roomId);
+  List<Submission> findByStatusIn(Collection<SubmissionStatus> statuses);
+}
 interface TestCaseRepository extends JpaRepository<TestCase,UUID> { List<TestCase> findByProblemIdOrderByOrdinal(UUID problemId); }
 interface TestResultRepository extends JpaRepository<TestResult,UUID> { List<TestResult> findBySubmissionId(UUID submissionId); }
 interface SnapshotRepository extends JpaRepository<CodeSnapshot,UUID> { List<CodeSnapshot> findByRoomIdOrderByCreatedAtAsc(UUID roomId); }

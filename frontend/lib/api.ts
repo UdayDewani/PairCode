@@ -5,6 +5,9 @@ export type Problem = { id: string; number: string; title: string; difficulty: '
 export type Room = { id: string; roomId: string; name: string; status: 'ACTIVE' | 'ENDED'; language: 'PYTHON' | 'JAVA' | 'CPP'; candidateCanEdit: boolean; editorLocked: boolean; documentState?: string | null; problem?: Problem; participants: Participant[] }
 export type Participant = { id: string; name: string; email: string; role: 'INTERVIEWER' | 'CANDIDATE'; online: boolean }
 export type ChatMessage = { id: string; author: string; authorId: string; content: string; type: string; createdAt: string }
+export type SubmissionStatus = 'QUEUED' | 'RUNNING' | 'SUCCESS' | 'COMPILE_ERROR' | 'RUNTIME_ERROR' | 'TIME_LIMIT_EXCEEDED' | 'WRONG_ANSWER'
+export type TestResult = { testCaseId: string; passed: boolean; runtimeMs?: number; input?: string; expectedOutput?: string; actualOutput?: string }
+export type Submission = { id: string; status: SubmissionStatus; stdout?: string | null; stderr?: string | null; compileError?: string | null; exitCode?: number | null; executionTimeMs?: number | null; memoryBytes?: number | null; score?: number | null; testResults?: TestResult[] }
 
 const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 let accessToken = typeof window === 'undefined' ? null : localStorage.getItem('paircode.access')
@@ -67,8 +70,9 @@ export const api = {
   changeLanguage: (code: string, language: Room['language']) => request<Room>(`/rooms/${code}/language`, { method: 'PATCH', body: JSON.stringify({ language }) }).then(parseRoom),
   endRoom: (code: string, sourceCode: string) => request<void>(`/rooms/${code}/end`, { method: 'POST', body: JSON.stringify({ sourceCode }) }),
   messages: (code: string) => request<ChatMessage[]>(`/rooms/${code}/messages`), sendMessage: (code: string, content: string) => request<ChatMessage>(`/rooms/${code}/messages`, { method: 'POST', body: JSON.stringify({ content }) }),
-  run: (code: string, data: { sourceCode: string; language: string; stdin?: string }) => request(`/rooms/${code}/run`, { method: 'POST', body: JSON.stringify(data) }),
-  submit: (code: string, data: { sourceCode: string; language: string; stdin?: string }) => request(`/rooms/${code}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+  run: (code: string, data: { sourceCode: string; language: string; stdin?: string }) => request<Submission>(`/rooms/${code}/run`, { method: 'POST', body: JSON.stringify(data) }),
+  submit: (code: string, data: { sourceCode: string; language: string; stdin?: string }) => request<Submission>(`/rooms/${code}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+  submission: (code: string, id: string) => request<Submission>(`/rooms/${code}/submissions/${id}`),
   sessions: () => request<Array<Record<string, unknown>>>('/sessions'), dashboard: () => request<Record<string, unknown>>('/dashboard'),
   wsTicket: () => request<{ ticket: string; expiresAt: string }>('/ws-ticket', { method: 'POST' }),
 }

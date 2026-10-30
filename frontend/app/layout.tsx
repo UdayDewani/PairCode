@@ -5,23 +5,23 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'PairCode — Interview. Code. Together.',
   description: 'The collaborative coding workspace for technical interviews.',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/icon.svg?v=2',
+        type: 'image/svg+xml',
+      },
+      {
+        url: '/icon-light-32x32.png?v=2',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/icon-dark-32x32.png',
+        url: '/icon-dark-32x32.png?v=2',
         media: '(prefers-color-scheme: dark)',
       },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
     ],
-    apple: '/apple-icon.png',
+    shortcut: '/icon.svg?v=2',
+    apple: '/apple-icon.png?v=2',
   },
 }
 

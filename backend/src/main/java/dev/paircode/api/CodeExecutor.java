@@ -42,8 +42,49 @@ record ExecutionResult(
     long memoryBytes
 ) {}
 
+record CompileResult(boolean success, String message, int exitCode, long executionTimeMs) {
+  static CompileResult ok(long executionTimeMs) {
+    return new CompileResult(true, "", 0, executionTimeMs);
+  }
+
+  static CompileResult failed(String message, int exitCode, long executionTimeMs) {
+    return new CompileResult(false, message, exitCode, executionTimeMs);
+  }
+}
+
+/**
+ * A compiled submission that can run multiple stdin/stdout test cases against the same artifact.
+ * Call {@link #close()} after the last run to remove the sandbox work directory.
+ */
+interface PreparedExecution extends AutoCloseable {
+  CompileResult compile();
+
+  ExecutionResult run(String stdin);
+
+  @Override
+  void close();
+}
+
 interface CodeExecutor {
-  ExecutionResult execute(ExecutionRequest request);
+  PreparedExecution prepare(String language, String sourceCode);
+
+  default ExecutionResult execute(ExecutionRequest request) {
+    try (PreparedExecution execution = prepare(request.language(), request.sourceCode())) {
+      CompileResult compile = execution.compile();
+      if (!compile.success()) {
+        return new ExecutionResult(
+            SubmissionStatus.COMPILE_ERROR,
+            "",
+            "",
+            compile.message(),
+            compile.exitCode(),
+            compile.executionTimeMs(),
+            0
+        );
+      }
+      return execution.run(request.stdin());
+    }
+  }
 }
 
 final class RunnerImages {
@@ -83,6 +124,8 @@ class DockerCodeExecutor implements CodeExecutor {
   private static final Logger log = LoggerFactory.getLogger(DockerCodeExecutor.class);
   private static final Duration COMPILE_TIMEOUT = Duration.ofSeconds(30);
   private static final Duration RUN_TIMEOUT = Duration.ofSeconds(8);
+  private static final String COMPILE_MEMORY_LIMIT = "512m";
+  private static final String RUN_MEMORY_LIMIT = "256m";
   private static final Duration STALE_AFTER = Duration.ofSeconds(60);
   private static final String SANDBOX_LABEL = "paircode.sandbox=true";
 
@@ -126,158 +169,242 @@ class DockerCodeExecutor implements CodeExecutor {
   @Override
   public ExecutionResult execute(ExecutionRequest request) {
     if (!enabled) {
-      return new ExecutionResult(
-          SubmissionStatus.RUNTIME_ERROR,
-          "",
-          "Runner is disabled. Set RUNNER_ENABLED=true.",
-          null,
-          -1,
-          0,
-          0
-      );
+      return runnerDisabledResult();
+    }
+    return CodeExecutor.super.execute(request);
+  }
+
+  @Override
+  public PreparedExecution prepare(String language, String sourceCode) {
+    if (!enabled) {
+      throw new IllegalStateException("Runner is disabled. Set RUNNER_ENABLED=true.");
     }
 
     Path runDirectory = null;
-    long started = System.nanoTime();
-    String containerPrefix = "paircode-run-" + UUID.randomUUID().toString().substring(0, 8);
-
     try {
       ensureWorkDirectory();
       runDirectory = Files.createTempDirectory(workDir, "run-");
       relaxPermissions(runDirectory);
 
-      String sourceFile = switch (request.language()) {
+      String sourceFile = switch (language) {
         case "JAVA" -> "Main.java";
         case "CPP" -> "main.cpp";
         default -> "main.py";
       };
       Path sourcePath = runDirectory.resolve(sourceFile);
-      Files.writeString(sourcePath, request.sourceCode(), StandardCharsets.UTF_8);
+      Files.writeString(sourcePath, sourceCode, StandardCharsets.UTF_8);
       makeReadable(sourcePath);
 
-      Path inputPath = runDirectory.resolve("input.txt");
-      Files.writeString(inputPath, Optional.ofNullable(request.stdin()).orElse(""), StandardCharsets.UTF_8);
-      makeReadable(inputPath);
+      return new DockerPreparedExecution(
+          language,
+          runDirectory,
+          "paircode-run-" + UUID.randomUUID().toString().substring(0, 8)
+      );
+    } catch (IOException | RuntimeException e) {
+      deleteRecursively(runDirectory);
+      throw new IllegalStateException("Could not prepare the Docker runner: " + e.getMessage(), e);
+    }
+  }
 
-      String image = RunnerImages.forLanguage(request.language());
+  private ExecutionResult runnerDisabledResult() {
+    return new ExecutionResult(
+        SubmissionStatus.RUNTIME_ERROR,
+        "",
+        "Runner is disabled. Set RUNNER_ENABLED=true.",
+        null,
+        -1,
+        0,
+        0
+    );
+  }
 
-      if ("JAVA".equals(request.language()) || "CPP".equals(request.language())) {
-        String compileCommand = "JAVA".equals(request.language())
-            ? "javac Main.java"
-            : "g++ -O2 -std=c++20 main.cpp -o main";
-        ContainerRun compile = runContainer(containerPrefix + "-c", image, runDirectory, compileCommand, COMPILE_TIMEOUT);
+  private final class DockerPreparedExecution implements PreparedExecution {
+    private final String language;
+    private final Path runDirectory;
+    private final String containerPrefix;
+    private final String image;
+    private CompileResult compileResult;
+    private int runCount;
+    private boolean closed;
 
+    private DockerPreparedExecution(String language, Path runDirectory, String containerPrefix) {
+      this.language = language;
+      this.runDirectory = runDirectory;
+      this.containerPrefix = containerPrefix;
+      this.image = RunnerImages.forLanguage(language);
+    }
+
+    @Override
+    public synchronized CompileResult compile() {
+      if (compileResult != null) {
+        return compileResult;
+      }
+      long started = System.nanoTime();
+      String command = switch (language) {
+        case "JAVA" -> "javac Main.java";
+        case "CPP" -> "g++ -O2 -std=c++20 main.cpp -o main";
+        default -> "python3 -m py_compile main.py";
+      };
+      try {
+        ContainerRun compile = runContainer(
+            containerPrefix + "-c",
+            image,
+            runDirectory,
+            command,
+            COMPILE_TIMEOUT,
+            COMPILE_MEMORY_LIMIT
+        );
         if (compile.timedOut()) {
-          String message = "Compilation timed out after " + COMPILE_TIMEOUT.toSeconds() + " seconds.";
+          compileResult = CompileResult.failed(
+              "Compilation timed out after " + COMPILE_TIMEOUT.toSeconds() + " seconds.",
+              124,
+              elapsed(started)
+          );
+        } else if (compile.exitCode() != 0) {
+          String stderr = compile.oomKilled()
+              ? prepend("Compiler ran out of memory (512 MB limit).\n", compile.stderr())
+              : compile.stderr();
+          compileResult = CompileResult.failed(
+              joinOutput(stderr, compile.stdout()),
+              compile.exitCode(),
+              elapsed(started)
+          );
+        } else {
+          compileResult = CompileResult.ok(elapsed(started));
+        }
+      } catch (IOException e) {
+        compileResult = CompileResult.failed(
+            "Could not start the Docker compiler: " + e.getMessage(),
+            -1,
+            elapsed(started)
+        );
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        compileResult = CompileResult.failed("Compilation was interrupted.", -1, elapsed(started));
+      } catch (RuntimeException e) {
+        log.error("Unexpected compiler failure", e);
+        compileResult = CompileResult.failed("Runner error: " + e.getMessage(), -1, elapsed(started));
+      }
+      return compileResult;
+    }
+
+    @Override
+    public synchronized ExecutionResult run(String stdin) {
+      if (compileResult == null || !compileResult.success()) {
+        return new ExecutionResult(
+            SubmissionStatus.COMPILE_ERROR,
+            "",
+            "",
+            "The program was not compiled successfully.",
+            compileResult == null ? -1 : compileResult.exitCode(),
+            0,
+            0
+        );
+      }
+
+      long started = System.nanoTime();
+      try {
+        Path inputPath = runDirectory.resolve("input.txt");
+        Files.writeString(inputPath, Optional.ofNullable(stdin).orElse(""), StandardCharsets.UTF_8);
+        makeReadable(inputPath);
+
+        String runCommand = switch (language) {
+          case "JAVA" -> "timeout 5 java -Xmx128m -XX:+UseSerialGC Main < input.txt";
+          case "CPP" -> "timeout 5 ./main < input.txt";
+          default -> "timeout 5 python3 main.py < input.txt";
+        };
+        ContainerRun run = runContainer(
+            containerPrefix + "-r" + (++runCount),
+            image,
+            runDirectory,
+            runCommand,
+            RUN_TIMEOUT,
+            RUN_MEMORY_LIMIT
+        );
+
+        if (run.timedOut() || run.exitCode() == 124) {
           return new ExecutionResult(
-              SubmissionStatus.COMPILE_ERROR,
-              compile.stdout(),
-              message,
-              joinOutput(compile.stderr(), compile.stdout()),
+              SubmissionStatus.TIME_LIMIT_EXCEEDED,
+              run.stdout(),
+              "Time limit exceeded (5 seconds).",
+              null,
               124,
               elapsed(started),
               0
           );
         }
-        if (compile.exitCode() != 0) {
-          String stderr = compile.oomKilled()
-              ? prepend("Compiler ran out of memory (256 MB limit).\n", compile.stderr())
-              : compile.stderr();
-          String combined = joinOutput(stderr, compile.stdout());
+        if (run.oomKilled()) {
           return new ExecutionResult(
-              SubmissionStatus.COMPILE_ERROR,
-              "",
-              combined,
-              combined,
-              compile.exitCode(),
+              SubmissionStatus.RUNTIME_ERROR,
+              run.stdout(),
+              prepend("Memory limit exceeded: the process was killed after using more than 256 MB.\n", run.stderr()),
+              null,
+              137,
               elapsed(started),
               0
           );
         }
-      }
-
-      String runCommand = switch (request.language()) {
-        case "JAVA" -> "timeout 5 java -Xmx128m -XX:+UseSerialGC Main < input.txt";
-        case "CPP" -> "timeout 5 ./main < input.txt";
-        default -> "timeout 5 python3 main.py < input.txt";
-      };
-      ContainerRun run = runContainer(containerPrefix + "-r", image, runDirectory, runCommand, RUN_TIMEOUT);
-
-      if (run.timedOut() || run.exitCode() == 124) {
+        if (run.exitCode() != 0) {
+          return new ExecutionResult(
+              SubmissionStatus.RUNTIME_ERROR,
+              run.stdout(),
+              run.stderr(),
+              null,
+              run.exitCode(),
+              elapsed(started),
+              0
+          );
+        }
         return new ExecutionResult(
-            SubmissionStatus.TIME_LIMIT_EXCEEDED,
-            run.stdout(),
-            "Time limit exceeded (5 seconds).",
-            null,
-            124,
-            elapsed(started),
-            0
-        );
-      }
-      if (run.oomKilled()) {
-        return new ExecutionResult(
-            SubmissionStatus.RUNTIME_ERROR,
-            run.stdout(),
-            prepend("Memory limit exceeded: the process was killed after using more than 256 MB.\n", run.stderr()),
-            null,
-            137,
-            elapsed(started),
-            0
-        );
-      }
-      if (run.exitCode() != 0) {
-        return new ExecutionResult(
-            SubmissionStatus.RUNTIME_ERROR,
+            SubmissionStatus.SUCCESS,
             run.stdout(),
             run.stderr(),
             null,
-            run.exitCode(),
+            0,
+            elapsed(started),
+            0
+        );
+      } catch (IOException e) {
+        return new ExecutionResult(
+            SubmissionStatus.RUNTIME_ERROR,
+            "",
+            "Could not start the Docker runner: " + e.getMessage(),
+            null,
+            -1,
+            elapsed(started),
+            0
+        );
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return new ExecutionResult(
+            SubmissionStatus.RUNTIME_ERROR,
+            "",
+            "Execution was interrupted.",
+            null,
+            -1,
+            elapsed(started),
+            0
+        );
+      } catch (RuntimeException e) {
+        log.error("Unexpected runner failure", e);
+        return new ExecutionResult(
+            SubmissionStatus.RUNTIME_ERROR,
+            "",
+            "Runner error: " + e.getMessage(),
+            null,
+            -1,
             elapsed(started),
             0
         );
       }
-      return new ExecutionResult(
-          SubmissionStatus.SUCCESS,
-          run.stdout(),
-          run.stderr(),
-          null,
-          0,
-          elapsed(started),
-          0
-      );
-    } catch (IOException e) {
-      return new ExecutionResult(
-          SubmissionStatus.RUNTIME_ERROR,
-          "",
-          "Could not start the Docker runner: " + e.getMessage(),
-          null,
-          -1,
-          elapsed(started),
-          0
-      );
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return new ExecutionResult(
-          SubmissionStatus.RUNTIME_ERROR,
-          "",
-          "Execution was interrupted.",
-          null,
-          -1,
-          elapsed(started),
-          0
-      );
-    } catch (RuntimeException e) {
-      log.error("Unexpected runner failure", e);
-      return new ExecutionResult(
-          SubmissionStatus.RUNTIME_ERROR,
-          "",
-          "Runner error: " + e.getMessage(),
-          null,
-          -1,
-          elapsed(started),
-          0
-      );
-    } finally {
+    }
+
+    @Override
+    public synchronized void close() {
+      if (closed) {
+        return;
+      }
+      closed = true;
       deleteRecursively(runDirectory);
     }
   }
@@ -301,7 +428,8 @@ class DockerCodeExecutor implements CodeExecutor {
       String image,
       Path directory,
       String shellCommand,
-      Duration timeout
+      Duration timeout,
+      String memoryLimit
   ) throws IOException, InterruptedException {
     List<String> command = new ArrayList<>();
     command.add(docker);
@@ -319,9 +447,9 @@ class DockerCodeExecutor implements CodeExecutor {
     command.add("--pids-limit");
     command.add("64");
     command.add("--memory");
-    command.add("256m");
+    command.add(memoryLimit);
     command.add("--memory-swap");
-    command.add("256m");
+    command.add(memoryLimit);
     command.add("--cpus");
     command.add("1");
     command.add("--ulimit");

@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -95,6 +96,56 @@ class DockerCodeExecutorTest {
 
     assertEquals(SubmissionStatus.COMPILE_ERROR, result.status());
     assertFalse(result.compileError().isBlank());
+  }
+
+  @Test
+  void preparedJavaExecutionCompilesOnceAndRunsManyCases() {
+    String source = """
+        import java.util.Scanner;
+
+        public class Main {
+          public static void main(String[] args) {
+            System.out.println(new Scanner(System.in).nextInt() * 2);
+          }
+        }
+        """;
+
+    try (PreparedExecution execution = executor.prepare("JAVA", source)) {
+      CompileResult compile = execution.compile();
+      assertTrue(compile.success(), () -> "compile failed: " + compile.message());
+      assertSame(compile, execution.compile(), "The compiled artifact should be reused");
+
+      ExecutionResult first = execution.run("2\n");
+      ExecutionResult second = execution.run("5\n");
+
+      assertEquals(SubmissionStatus.SUCCESS, first.status(), () -> failureMessage(first));
+      assertEquals("4", first.stdout().trim());
+      assertEquals(SubmissionStatus.SUCCESS, second.status(), () -> failureMessage(second));
+      assertEquals("10", second.stdout().trim());
+    }
+  }
+
+  @Test
+  void preparedExecutionReportsCompileFailureToEveryRun() {
+    String source = """
+        public class Main {
+          public static void main(String[] args) {
+            int broken = ;
+          }
+        }
+        """;
+
+    try (PreparedExecution execution = executor.prepare("JAVA", source)) {
+      CompileResult compile = execution.compile();
+      assertFalse(compile.success());
+      assertFalse(compile.message().isBlank());
+
+      ExecutionResult run = execution.run("anything\n");
+
+      assertEquals(SubmissionStatus.COMPILE_ERROR, run.status());
+      assertFalse(run.compileError().isBlank());
+      assertTrue(run.stderr().isEmpty(), "Compile errors must not be duplicated into stderr");
+    }
   }
 
   @Test

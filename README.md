@@ -31,7 +31,7 @@ Copy `.env.example` and set a strong, unique `JWT_SECRET` outside development. N
 1. Register two accounts and log in in two browser profiles.
 2. Create a room, copy its `PC-XXXXX` code, and join it from the second account.
 3. Open a WebSocket from each profile; relay a Yjs binary update and awareness event.
-4. Send chat, run a complete Python/Java/C++ program, and submit against the selected problem.
+4. Send chat, run a complete Python/Java/C++ program with its stdin, and submit. Untouched starter code must finish as `WRONG_ANSWER` with per-test details; a correct solution must score 100; a Java compile error must show the `javac` message.
 5. Change the room language as the interviewer; confirm the filename extension and editor mode change, and that an empty/starter document is replaced exactly once. Verify a locked candidate sees the language selector disabled with its reason.
 6. Lock candidate editing, verify both REST snapshot and WebSocket document update are forbidden, then unlock.
 7. End the room and inspect `GET /api/v1/sessions/{id}` as the interviewer.

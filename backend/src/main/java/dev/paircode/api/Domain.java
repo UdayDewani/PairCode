@@ -9,7 +9,7 @@ import java.util.UUID;
 enum Role { INTERVIEWER, CANDIDATE }
 enum RoomStatus { ACTIVE, ENDED }
 enum Difficulty { EASY, MEDIUM, HARD }
-enum SubmissionStatus { QUEUED, RUNNING, SUCCESS, COMPILE_ERROR, RUNTIME_ERROR, TIME_LIMIT_EXCEEDED }
+enum SubmissionStatus { QUEUED, RUNNING, SUCCESS, COMPILE_ERROR, RUNTIME_ERROR, TIME_LIMIT_EXCEEDED, WRONG_ANSWER }
 
 @Entity @Table(name="users")
 class AppUser {

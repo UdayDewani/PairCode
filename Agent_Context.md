@@ -69,3 +69,30 @@
   7. Used `sh -c` rather than `sh -lc` because the login shell reset `PATH` in the Java runner image and hid `javac`.
 - **Rationale:** Deployed Run failed because the API image had no Docker CLI, the daemon could not see the API container's `/tmp`, and the sandbox user could not write to a root-owned `0700` directory. The other changes remove runner deadlocks, make failures diagnosable, and keep leftover sandboxes from accumulating.
 - **Verification:** `mvn -B test` passes (25 tests, 1 Testcontainers test skipped because Testcontainers could not negotiate the local Docker Desktop pipe); the executor integration tests ran all three languages plus compile-error, timeout, and large-output cases against locally built runner images. A full API smoke run through the built production image also returned `SUCCESS`/`2` for Python, Java, and C++, with the `runner` health component `UP`. Docker Desktop's `/tmp` bind is `noexec`, so the smoke run used `RUNNER_WORK_DIR=/var/lib/paircode-run`; see `docs/code-runner.md`.
+
+### [2026-10-29] Make Submit evaluate real test cases (Phase 2)
+- **Decision:**
+  1. Added `WRONG_ANSWER` to `SubmissionStatus` and centralized individual-test and aggregate status rules in `Evaluation`. Priority is `COMPILE_ERROR`, `RUNTIME_ERROR`, `TIME_LIMIT_EXCEEDED`, `WRONG_ANSWER`, `SUCCESS`; a successful process with mismatched output is a wrong answer.
+  2. Refactored `CodeExecutor` around `PreparedExecution`: submissions compile once and run every test case against the same artifact. Compilation now gets a 512 MB memory limit while execution stays at 256 MB, because `g++ -O2` with `<bits/stdc++.h>` was killed at 256 MB.
+  3. Aggregate results store the `passed/total tests passed` summary, the first failing test's stderr and exit code, the slowest runtime, and a percentage score. Compile failures keep compiler text in `compileError` and leave `stderr` empty.
+  4. Added member-only `GET /api/v1/rooms/{code}/submissions/{id}`. Hidden tests expose only `testCaseId`, `passed`, and `runtimeMs`; input, expected, and actual output are omitted in `dto()`.
+  5. Added `V7__runnable_starter_code.sql` with 15 problems × 3 languages. Every starter reads the documented stdin format, calls a marked TODO function, and prints the expected format; Group Anagrams output is canonicalized.
+  6. Mark `QUEUED`/`RUNNING` submissions as `RUNTIME_ERROR` at startup because their sandbox no longer exists.
+  7. Updated the room UI with stdin for Run, a real Test cases tab using visible test data, status-specific colors, a submission poll fallback after ~15 seconds, and the successful-empty-output hint. Removed the misleading `0 bytes` memory line.
+  8. Added `ReferenceSolutionTest` (all 45 reference solutions score 100; untouched starters score below 100), `SubmissionServiceTest`, `EvaluationTest`, and a hidden-data controller test. Enabled Byte Buddy's experimental flag in surefire so Mockito works on local JDK 25; the project target remains Java 21.
+- **Rationale:** Submit previously reused the single Run result and never evaluated the seeded test cases. Starters were class/function fragments that could not compile or read stdin, so candidates could not run them and Submit could not distinguish a wrong answer from a crash.
+- **Verification:** Pending full-suite run. `frontend` production build passes after the UI changes.
+
+### [2026-10-30] Frontend Docker Containerization & Build Optimization
+- **Decision:**
+  1. Added `frontend/.dockerignore` to exclude `node_modules`, `.next`, `.git`, and `.env*.local` from Docker build context, reducing context transfer size from ~920 MB to 1.4 KB.
+  2. Updated `docker-compose.yml` to publish port `3000:3000` for the `web` service and provide local defaults for `NEXT_PUBLIC_API_BASE_URL` (`http://localhost:8080/api/v1`) and `NEXT_PUBLIC_WS_URL` (`ws://localhost:8080/ws`).
+  3. Built and launched `paircode-web-1` container via Docker Compose.
+- **Verification:** Container `paircode-web-1` is running healthy (`Up`), and `http://localhost:3000/` responds with HTTP 200.
+
+### [2026-10-30] Replace v0 Favicon with PairCode Logo
+- **Decision:**
+  1. Replaced the old v0 logo in `frontend/public/icon.svg` with the official PairCode `< / >` code symbol logo featuring adaptive light/dark theme styles.
+  2. Updated `frontend/app/layout.tsx` metadata icons to point cleanly to `/icon.svg` (and removed obsolete v0 PNG favicon links).
+  3. Rebuilt the web container in Docker and verified the browser tab icon loads `/icon.svg`.
+- **Verification:** Checked `http://localhost:3000` HTML contains `<link rel="icon" href="/icon.svg"/>` and `/icon.svg` returns the PairCode logo with HTTP 200.

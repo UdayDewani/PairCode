@@ -35,24 +35,10 @@ function Landing({ onAuth }: { onAuth: (register?: boolean) => void }) {
           <h1 className="mt-5 max-w-xl text-5xl font-semibold leading-[1.05] tracking-[-.04em] md:text-7xl">
             Interview.<br /><span className="text-primary">Code.</span> Together.
           </h1>
-          <p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">
-            The collaborative coding workspace for technical interviews. Solve problems together, in real time, from anywhere.
-          </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button type="button" size="lg" onClick={() => onAuth(true)}>
               Start interviewing <ArrowRight data-icon="inline-end" className="size-4" />
             </Button>
-            <Button type="button" size="lg" variant="outline" onClick={() => onAuth(false)}>
-              View demo <Play data-icon="inline-start" className="size-4" />
-            </Button>
-          </div>
-          <div className="mt-9 flex items-center gap-3 text-sm text-muted-foreground">
-            <div className="flex -space-x-2">
-              <Avatar initials="JD" color="bg-blue-500" />
-              <Avatar initials="SK" color="bg-rose-500" />
-              <Avatar initials="AM" color="bg-emerald-500" />
-            </div>
-            <span>Trusted by <strong className="text-foreground">2,000+</strong> engineering teams</span>
           </div>
         </div>
         <div className="product-frame">

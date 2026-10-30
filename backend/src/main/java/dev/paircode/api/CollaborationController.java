@@ -36,5 +36,11 @@ class CollaborationController {
     if(!r.language.equalsIgnoreCase(request.language()))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Language must match the room language: "+r.language);
     var s=submissions.enqueue(r.id,user,request.sourceCode(),request.language(),request.stdin(),true);return ResponseEntity.accepted().body(submissions.dto(s));
   }
+  @GetMapping("/submissions/{id}")
+  Map<String,Object> submission(@AuthenticationPrincipal AuthPrincipal p,@PathVariable String roomCode,@PathVariable UUID id){
+    var r=rooms.byCode(roomCode);
+    rooms.member(r.id,Api.user(p));
+    return submissions.dto(submissions.get(r.id,id));
+  }
   private Map<String,Object> message(ChatMessage x){var u=users.findById(x.authorId).orElse(null);var m=new LinkedHashMap<String,Object>();m.put("id",x.id);m.put("roomId",x.roomId);m.put("authorId",x.authorId);m.put("author",u==null?"System":u.displayName);m.put("content",x.content);m.put("type",x.type);m.put("createdAt",x.createdAt);return m;}
 }

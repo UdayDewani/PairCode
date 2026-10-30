@@ -23,5 +23,17 @@
     <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
     <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
   </dependencies>
-  <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
+  <build><plugins>
+    <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+    <!-- Byte Buddy 1.15 (managed by Spring Boot 3.4) needs this flag to mock classes on JDK 25. -->
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-surefire-plugin</artifactId>
+      <configuration>
+        <systemPropertyVariables>
+          <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
+        </systemPropertyVariables>
+      </configuration>
+    </plugin>
+  </plugins></build>
 </project>
